@@ -1,0 +1,35 @@
+# Dependencias
+node_modules/
+
+# Archivos de environment (cada desarrollador/entorno tiene los suyos)
+# Copiar desde los *.example y ajustar apiUrl, chatMenuEnabled, etc.
+src/environments/environment.ts
+src/environments/environment.prod.ts
+
+# Build
+dist/
+.angular/
+*.tsbuildinfo
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs y caché
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.cache
+
+# Testing
+coverage/
+.nyc_output/
+karma-results.xml
+
+# e2e
+/e2e/screenshots/
+/e2e/videos/
