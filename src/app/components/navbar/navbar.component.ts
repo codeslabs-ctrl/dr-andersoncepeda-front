@@ -404,7 +404,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   /** Si el chat está habilitado por variable de entorno (chatMenuEnabled === true, 1 o '1'). */
   get chatMenuEnabled(): boolean {
-    const v = environment.chatMenuEnabled as boolean | number | string;
-    return v === true || v === 1 || v === '1';
+    const v = environment.chatMenuEnabled;
+    const s = String(v);
+    return v === true || s === '1';
   }
 }
