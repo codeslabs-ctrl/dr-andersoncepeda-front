@@ -205,7 +205,7 @@ import { Medico } from '../../../services/medico.service';
                       <span class="btn-text">Cancelar</span>
                     </button>
                     <button 
-                      *ngIf="consulta.estado_consulta === 'completada' && canFinalizarConsulta()"
+                      *ngIf="isEstadoCompletada(consulta) && canFinalizarConsulta()"
                       class="action-btn btn-complete" 
                       (click)="finalizarConsulta(consulta)" 
                       title="Finalizar">
@@ -303,7 +303,7 @@ import { Medico } from '../../../services/medico.service';
                 Cancelar
               </button>
               <button 
-                *ngIf="consulta.estado_consulta === 'completada' && canFinalizarConsulta()"
+                *ngIf="isEstadoCompletada(consulta) && canFinalizarConsulta()"
                 class="action-btn success-btn" 
                 (click)="finalizarConsulta(consulta)" 
                 title="Finalizar consulta">
@@ -1599,6 +1599,8 @@ export class ConsultasComponent implements OnInit {
 
   // Propiedades para autenticación
   currentUser: any = null;
+  /** Permiso para finalizar consultas (según Gestión de Perfiles) */
+  puedeFinalizarConsulta = false;
 
   constructor(
     private consultaService: ConsultaService,
@@ -1631,11 +1633,28 @@ export class ConsultasComponent implements OnInit {
     // Cargar usuario actual
     this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
+      this.loadPermisoFinalizar();
     });
-    
+    this.loadPermisoFinalizar();
     this.loadConsultas();
     this.loadMedicos();
     this.loadEspecialidades();
+  }
+
+  /** Carga el permiso para finalizar consultas (Dashboard y Gestión de Consultas) */
+  loadPermisoFinalizar(): void {
+    this.consultaService.getPermisoFinalizar().subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          this.puedeFinalizarConsulta = res.data.puedeFinalizar;
+        } else {
+          this.puedeFinalizarConsulta = this.currentUser?.rol === 'administrador' || this.currentUser?.rol === 'secretaria';
+        }
+      },
+      error: () => {
+        this.puedeFinalizarConsulta = this.currentUser?.rol === 'administrador' || this.currentUser?.rol === 'secretaria';
+      }
+    });
   }
 
   loadConsultas(): void {
@@ -1839,8 +1858,13 @@ export class ConsultasComponent implements OnInit {
     this.router.navigate(['/admin/consultas', consulta.id, 'finalizar']);
   }
 
+  /** True si la consulta está en estado Completada (solo entonces se muestra el botón Finalizar). */
+  isEstadoCompletada(consulta: ConsultaWithDetails): boolean {
+    return (consulta?.estado_consulta || '').toLowerCase() === 'completada';
+  }
+
   canFinalizarConsulta(): boolean {
-    return this.currentUser?.rol === 'secretaria' || this.currentUser?.rol === 'administrador';
+    return this.puedeFinalizarConsulta;
   }
 
   canReagendarConsulta(): boolean {
