@@ -1791,18 +1791,18 @@ export class DashboardComponent implements OnInit {
     this.loadDashboardData();
   }
 
-  /** Carga el permiso para finalizar consultas (según Gestión de Perfiles). */
+  /** Carga el permiso para finalizar consultas (según Gestión de Perfiles). Si el API falla, se permite a administrador, secretaria y médico. */
   loadPermisoFinalizar(): void {
     this.consultaService.getPermisoFinalizar().subscribe({
       next: (res) => {
         if (res.success && res.data) {
           this.puedeFinalizarConsulta = res.data.puedeFinalizar;
         } else {
-          this.puedeFinalizarConsulta = this.currentUser?.rol === 'administrador' || this.currentUser?.rol === 'secretaria';
+          this.puedeFinalizarConsulta = this.currentUser?.rol === 'administrador' || this.currentUser?.rol === 'secretaria' || this.currentUser?.rol === 'medico';
         }
       },
       error: () => {
-        this.puedeFinalizarConsulta = this.currentUser?.rol === 'administrador' || this.currentUser?.rol === 'secretaria';
+        this.puedeFinalizarConsulta = this.currentUser?.rol === 'administrador' || this.currentUser?.rol === 'secretaria' || this.currentUser?.rol === 'medico';
       }
     });
   }

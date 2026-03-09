@@ -1641,18 +1641,18 @@ export class ConsultasComponent implements OnInit {
     this.loadEspecialidades();
   }
 
-  /** Carga el permiso para finalizar consultas (Dashboard y Gestión de Consultas) */
+  /** Carga el permiso para finalizar consultas (Dashboard y Gestión de Consultas). Si el API falla, se permite a administrador, secretaria y médico. */
   loadPermisoFinalizar(): void {
     this.consultaService.getPermisoFinalizar().subscribe({
       next: (res) => {
         if (res.success && res.data) {
           this.puedeFinalizarConsulta = res.data.puedeFinalizar;
         } else {
-          this.puedeFinalizarConsulta = this.currentUser?.rol === 'administrador' || this.currentUser?.rol === 'secretaria';
+          this.puedeFinalizarConsulta = this.currentUser?.rol === 'administrador' || this.currentUser?.rol === 'secretaria' || this.currentUser?.rol === 'medico';
         }
       },
       error: () => {
-        this.puedeFinalizarConsulta = this.currentUser?.rol === 'administrador' || this.currentUser?.rol === 'secretaria';
+        this.puedeFinalizarConsulta = this.currentUser?.rol === 'administrador' || this.currentUser?.rol === 'secretaria' || this.currentUser?.rol === 'medico';
       }
     });
   }
