@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ConsultaService } from '../../services/consulta.service';
 import { ErrorHandlerService } from '../../services/error-handler.service';
+import { AuthService } from '../../services/auth.service';
 import { SimpleChartComponent, ChartData, ChartConfig } from '../../components/charts/simple-chart.component';
 
 @Component({
@@ -13,7 +14,30 @@ import { SimpleChartComponent, ChartData, ChartConfig } from '../../components/c
     <div class="statistics-container">
       <div class="statistics-header">
         <h2>Estadísticas Médicas</h2>
-        <p class="subtitle">Análisis y visualización de datos médicos</p>
+        <p class="subtitle">{{ isMedico ? 'Tu actividad y consultas' : 'Análisis y visualización de datos médicos' }}</p>
+      </div>
+
+      <!-- Resumen para médico -->
+      <div class="resumen-medico" *ngIf="isMedico && (resumenMedico || loadingResumen)">
+        <div class="resumen-cards" *ngIf="resumenMedico && !loadingResumen">
+          <div class="resumen-card">
+            <span class="resumen-card-value">{{ resumenMedico.consultas_hoy ?? 0 }}</span>
+            <span class="resumen-card-label">Consultas hoy</span>
+          </div>
+          <div class="resumen-card">
+            <span class="resumen-card-value">{{ resumenMedico.consultas_esta_semana ?? 0 }}</span>
+            <span class="resumen-card-label">Esta semana</span>
+          </div>
+          <div class="resumen-card">
+            <span class="resumen-card-value">{{ resumenMedico.pacientes_atendidos_30d ?? 0 }}</span>
+            <span class="resumen-card-label">Pacientes atendidos (30 días)</span>
+          </div>
+          <div class="resumen-card resumen-card-warn">
+            <span class="resumen-card-value">{{ resumenMedico.no_asistieron ?? 0 }}</span>
+            <span class="resumen-card-label">No asistieron (30 días)</span>
+          </div>
+        </div>
+        <div class="loading" *ngIf="loadingResumen"><p>Cargando resumen...</p></div>
       </div>
 
       <!-- Gráfico de Consultas por Estado -->
@@ -65,8 +89,8 @@ import { SimpleChartComponent, ChartData, ChartConfig } from '../../components/c
         </div>
       </div>
 
-      <!-- Gráfico de Consultas por Especialidad -->
-      <div class="chart-section">
+      <!-- Gráfico de Consultas por Especialidad (oculto para médico) -->
+      <div class="chart-section" *ngIf="!isMedico">
         <div class="chart-header">
           <div class="period-filter">
             <label>🏥 Consultas por Especialidad - Período:</label>
@@ -114,8 +138,8 @@ import { SimpleChartComponent, ChartData, ChartConfig } from '../../components/c
         </div>
       </div>
 
-      <!-- Gráfico de Consultas por Médico -->
-      <div class="chart-section">
+      <!-- Gráfico de Consultas por Médico (oculto para médico) -->
+      <div class="chart-section" *ngIf="!isMedico">
         <div class="chart-header">
           <div class="period-filter">
             <label>👨‍⚕️ Consultas por Médico - Período:</label>
@@ -170,6 +194,36 @@ import { SimpleChartComponent, ChartData, ChartConfig } from '../../components/c
       font-family: 'Montserrat', sans-serif;
     }
 
+    .resumen-medico {
+      margin-bottom: 2rem;
+    }
+    .resumen-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+    }
+    .resumen-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border: 1px solid #E5E7EB;
+      text-align: center;
+    }
+    .resumen-card-value {
+      display: block;
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--color-primary, #7A9CC6);
+    }
+    .resumen-card-label {
+      display: block;
+      font-size: 0.875rem;
+      color: #374151;
+      margin-top: 0.25rem;
+    }
+    .resumen-card-warn .resumen-card-value { color: #b45309; }
+
     .statistics-header {
       text-align: center;
       margin-bottom: 3rem;
@@ -183,7 +237,7 @@ import { SimpleChartComponent, ChartData, ChartConfig } from '../../components/c
     }
 
     .subtitle {
-      color: #666666;
+      color: #555;
       font-size: 1.1rem;
       margin: 0;
     }
@@ -192,9 +246,10 @@ import { SimpleChartComponent, ChartData, ChartConfig } from '../../components/c
       background: white;
       border-radius: 12px;
       padding: 1.5rem;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       margin-bottom: 2rem;
       max-width: 100%;
+      border: 1px solid #E5E7EB;
     }
 
     .chart-header {
@@ -216,34 +271,32 @@ import { SimpleChartComponent, ChartData, ChartConfig } from '../../components/c
     .period-filter {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.75rem;
+      flex-wrap: wrap;
     }
 
-    .period-filter label {
+    .period-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
       font-weight: 600;
       color: #2C2C2C;
-      font-size: 1.1rem;
+      font-size: 1rem;
     }
+    .period-label .fa { color: var(--color-primary); }
 
-    .period-filter select {
-      padding: 0.5rem 1rem;
-      border: 1px solid #D1D5DB;
-      border-radius: 8px;
-      background: white;
-      font-size: 0.9rem;
-      color: #374151;
+    .period-select {
+      min-width: 180px;
       cursor: pointer;
-      transition: border-color 0.2s;
     }
-
-    .period-filter select:hover {
-      border-color: #3B82F6;
+    .period-filter .form-input:hover {
+      border-color: var(--color-primary);
     }
-
-    .period-filter select:focus {
+    .period-filter .form-input:focus,
+    .period-filter .form-input:focus-visible {
       outline: none;
-      border-color: #3B82F6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(122, 156, 198, 0.15);
     }
 
     .custom-dates {
@@ -273,35 +326,11 @@ import { SimpleChartComponent, ChartData, ChartConfig } from '../../components/c
       color: #374151;
     }
 
-    .date-input input {
-      padding: 0.5rem;
-      border: 1px solid #D1D5DB;
-      border-radius: 6px;
-      font-size: 0.875rem;
-      color: #374151;
-    }
-
-    .date-input input:focus {
+    .date-input .form-input:focus,
+    .date-input .form-input:focus-visible {
       outline: none;
-      border-color: #3B82F6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    }
-
-    .btn-apply {
-      padding: 0.5rem 1rem;
-      background: #3B82F6;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 0.875rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background-color 0.2s;
-      height: fit-content;
-    }
-
-    .btn-apply:hover {
-      background: #2563EB;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(122, 156, 198, 0.15);
     }
 
     .chart-container {
@@ -320,12 +349,12 @@ import { SimpleChartComponent, ChartData, ChartConfig } from '../../components/c
     .no-data, .loading {
       text-align: center;
       padding: 2rem;
-      color: #6B7280;
+      color: #374151;
       font-style: italic;
     }
 
     .loading {
-      color: #3B82F6;
+      color: var(--color-primary);
     }
 
     @media (max-width: 768px) {
@@ -355,7 +384,7 @@ import { SimpleChartComponent, ChartData, ChartConfig } from '../../components/c
         align-items: stretch;
       }
 
-      .btn-apply {
+      .date-inputs .btn {
         width: 100%;
       }
 
@@ -421,15 +450,48 @@ export class StatisticsComponent implements OnInit {
   fechaFinMedicos: string = '';
   loadingMedicos: boolean = false;
 
+  isMedico = false;
+  resumenMedico: { consultas_hoy?: number; consultas_esta_semana?: number; pacientes_atendidos_30d?: number; no_asistieron?: number } | null = null;
+  loadingResumen = false;
+
   constructor(
     private consultaService: ConsultaService,
-    private errorHandler: ErrorHandlerService
+    private errorHandler: ErrorHandlerService,
+    private authService: AuthService
   ) {}
 
   ngOnInit() {
+    this.isMedico = this.authService.isMedico();
+    if (this.isMedico) {
+      this.loadResumenMedico();
+    }
     this.loadChartData();
-    this.loadEspecialidadesData();
-    this.loadMedicosData();
+    if (!this.isMedico) {
+      this.loadEspecialidadesData();
+      this.loadMedicosData();
+    }
+  }
+
+  loadResumenMedico(): void {
+    this.loadingResumen = true;
+    this.consultaService.getEstadisticasConsultas().subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          const d = response.data as Record<string, number>;
+          this.resumenMedico = {
+            consultas_hoy: d['consultas_hoy'],
+            consultas_esta_semana: d['consultas_esta_semana'],
+            pacientes_atendidos_30d: d['pacientes_atendidos_30d'],
+            no_asistieron: d['no_asistieron']
+          };
+        }
+        this.loadingResumen = false;
+      },
+      error: (err) => {
+        this.errorHandler.logError(err, 'resumen médico');
+        this.loadingResumen = false;
+      }
+    });
   }
 
   loadChartData() {
