@@ -477,12 +477,17 @@ export class StatisticsComponent implements OnInit {
     this.consultaService.getEstadisticasConsultas().subscribe({
       next: (response) => {
         if (response.success && response.data) {
-          const d = response.data as Record<string, number>;
+          const d = response.data as {
+            consultas_hoy?: number;
+            consultas_esta_semana?: number;
+            pacientes_atendidos_30d?: number;
+            no_asistieron?: number;
+          };
           this.resumenMedico = {
-            consultas_hoy: d['consultas_hoy'],
-            consultas_esta_semana: d['consultas_esta_semana'],
-            pacientes_atendidos_30d: d['pacientes_atendidos_30d'],
-            no_asistieron: d['no_asistieron']
+            consultas_hoy: d.consultas_hoy ?? 0,
+            consultas_esta_semana: d.consultas_esta_semana ?? 0,
+            pacientes_atendidos_30d: d.pacientes_atendidos_30d ?? 0,
+            no_asistieron: d.no_asistieron ?? 0
           };
         }
         this.loadingResumen = false;
