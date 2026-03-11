@@ -211,6 +211,11 @@ export const routes: Routes = [
     canActivate: [adminOnlyGuard]
   },
   {
+    path: 'admin/clinica-atencion',
+    loadComponent: () => import('./pages/admin/clinica-atencion/clinica-atencion.component').then(m => m.ClinicaAtencionComponent),
+    canActivate: [adminOnlyGuard]
+  },
+  {
     path: 'statistics',
     loadComponent: () => import('./pages/statistics/statistics.component').then(m => m.StatisticsComponent),
     canActivate: [authGuard]

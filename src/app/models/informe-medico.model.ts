@@ -142,6 +142,7 @@ export interface CrearInformeRequest {
   template_id?: number;
   estado?: 'borrador' | 'finalizado' | 'firmado' | 'enviado';
   fecha_emision?: string;
+  clinica_atencion_id?: number | null;
   observaciones?: string;
 }
 
@@ -150,6 +151,7 @@ export interface ActualizarInformeRequest {
   tipo_informe?: string;
   contenido?: string;
   estado?: 'borrador' | 'finalizado' | 'firmado' | 'enviado';
+  clinica_atencion_id?: number | null;
   observaciones?: string;
 }
 

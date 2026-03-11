@@ -15,6 +15,7 @@ import { AlertService } from '../../../../services/alert.service';
 import { HistoricoService } from '../../../../services/historico.service';
 import { HistoricoAntecedenteService } from '../../../../services/historico-antecedente.service';
 import { AntecedenteTipoService } from '../../../../services/antecedente-tipo.service';
+import { ClinicaAtencionService, ClinicaAtencion } from '../../../../services/clinica-atencion.service';
 import { 
   InformeMedico, 
   TemplateInforme, 
@@ -53,6 +54,7 @@ export class InformeMedicoFormComponent implements OnInit {
   // Filtros
   especialidadSeleccionada: number | null = null;
   medicosFiltrados: any[] = [];
+  clinicasAtencion: ClinicaAtencion[] = [];
   
   // Validación de historia médica
   tieneHistoriaMedica = false;
@@ -86,6 +88,7 @@ export class InformeMedicoFormComponent implements OnInit {
   get titulo() { return this.informeForm?.get('titulo'); }
   get tipo_informe() { return this.informeForm?.get('tipo_informe'); }
   get fecha_emision() { return this.informeForm?.get('fecha_emision'); }
+  get clinica_atencion_id() { return this.informeForm?.get('clinica_atencion_id'); }
   get observaciones() { return this.informeForm?.get('observaciones'); }
   get tieneAntecedentes(): boolean { return !!this.historicoParaSecciones?.id; }
   get tieneMotivoConsulta(): boolean {
@@ -131,6 +134,7 @@ export class InformeMedicoFormComponent implements OnInit {
     private historicoService: HistoricoService,
     private historicoAntecedenteService: HistoricoAntecedenteService,
     private antecedenteTipoService: AntecedenteTipoService,
+    private clinicaAtencionService: ClinicaAtencionService,
     private cdr: ChangeDetectorRef,
     private alertService: AlertService
   ) {
@@ -141,6 +145,7 @@ export class InformeMedicoFormComponent implements OnInit {
       paciente_id: ['', Validators.required],
       medico_id: ['', Validators.required],
       fecha_emision: [new Date().toISOString().split('T')[0], Validators.required],
+      clinica_atencion_id: [null as number | null],
       observaciones: ['', Validators.maxLength(1000)]
     });
   }
@@ -247,6 +252,12 @@ export class InformeMedicoFormComponent implements OnInit {
       error: (error: any) => {
         console.error('Error cargando especialidades:', error);
       }
+    });
+
+    // Clínicas de atención (para dropdown)
+    this.clinicaAtencionService.list(true).subscribe({
+      next: (res) => { this.clinicasAtencion = res.data || []; },
+      error: (err) => this.errorHandler.logError(err, 'cargar clínicas de atención')
     });
 
     this.cargando = false;
@@ -434,6 +445,7 @@ export class InformeMedicoFormComponent implements OnInit {
       template_id: undefined,
       estado: 'finalizado',
       fecha_emision: datos.fecha_emision,
+      clinica_atencion_id: datos.clinica_atencion_id ?? null,
       observaciones: datos.observaciones
     };
 
@@ -504,9 +516,7 @@ export class InformeMedicoFormComponent implements OnInit {
   }
 
   cancelar(): void {
-    this.alertService.confirm('¿Está seguro de que desea cancelar? Los cambios no guardados se perderán.', 'Cancelar').then((ok) => {
-      if (ok) this.router.navigate(['/admin/informes-medicos']);
-    });
+    this.router.navigate(['/admin/informes-medicos']);
   }
 
 
@@ -604,6 +614,7 @@ export class InformeMedicoFormComponent implements OnInit {
         this.datosContextuales = null;
         this.sugerenciasDisponibles = false;
         this.historialDisponible = false;
+        this.historicoParaSecciones = null;
       }
     } else {
       console.log('⚠️ Faltan datos: pacienteId o medicoId no seleccionados');
@@ -785,14 +796,16 @@ export class InformeMedicoFormComponent implements OnInit {
       const tiposMed = (tiposMedRes?.success && tiposMedRes?.data) ? tiposMedRes.data : [];
       const tiposQuirur = (tiposQuirurRes?.success && tiposQuirurRes?.data) ? tiposQuirurRes.data : [];
       const tiposHab = (tiposHabRes?.success && tiposHabRes?.data) ? tiposHabRes.data : [];
+      const tipoId = (x: number | string | undefined) => (x != null ? Number(x) : NaN);
       const mapaNombres: Record<number, string> = {};
-      [...tiposMed, ...tiposQuirur, ...tiposHab].forEach(t => { if (t.id != null) mapaNombres[t.id] = t.nombre; });
+      [...tiposMed, ...tiposQuirur, ...tiposHab].forEach(t => { const id = tipoId(t.id); if (!isNaN(id)) mapaNombres[id] = t.nombre; });
 
       const lineasMed: string[] = [];
       const lineasQuirur: string[] = [];
       const lineasHab: string[] = [];
       lista.forEach((a: { antecedente_tipo_id: number; presente: boolean; detalle?: string | null }) => {
-        const nombre = mapaNombres[a.antecedente_tipo_id] || `Ítem ${a.antecedente_tipo_id}`;
+        const aTipoId = tipoId((a as any).antecedente_tipo_id);
+        const nombre = mapaNombres[aTipoId] || `Ítem ${aTipoId}`;
         let detalleTexto = a.detalle?.trim() ?? '';
         if (detalleTexto) {
           try {
@@ -808,21 +821,21 @@ export class InformeMedicoFormComponent implements OnInit {
         const texto = a.presente
           ? (detalleTexto ? `${nombre}: Sí. ${detalleTexto}` : `${nombre}: Sí`)
           : `${nombre}: No`;
-        const li = `<li>${this.escapeHtml(texto)}</li>`;
-        if (tiposMed.some(t => t.id === a.antecedente_tipo_id)) lineasMed.push(li);
-        else if (tiposQuirur.some(t => t.id === a.antecedente_tipo_id)) lineasQuirur.push(li);
-        else lineasHab.push(li);
+        const linea = `<p>• ${this.escapeHtml(texto)}</p>`;
+        if (tiposMed.some(t => tipoId(t.id) === aTipoId)) lineasMed.push(linea);
+        else if (tiposQuirur.some(t => tipoId(t.id) === aTipoId)) lineasQuirur.push(linea);
+        else lineasHab.push(linea);
       });
 
       let html = '';
       if (lineasMed.length > 0) {
-        html += `<h3><strong>Antecedentes Médicos:</strong></h3><ul>${lineasMed.join('')}</ul>`;
+        html += `<h3><strong>Antecedentes Médicos:</strong></h3>${lineasMed.join('')}`;
       }
       if (lineasQuirur.length > 0) {
-        html += `<h3><strong>Antecedentes Quirúrgicos:</strong></h3><ul>${lineasQuirur.join('')}</ul>`;
+        html += `<h3><strong>Antecedentes Quirúrgicos:</strong></h3>${lineasQuirur.join('')}`;
       }
       if (lineasHab.length > 0) {
-        html += `<h3><strong>Hábitos Psicobiológicos:</strong></h3><ul>${lineasHab.join('')}</ul>`;
+        html += `<h3><strong>Hábitos Psicobiológicos:</strong></h3>${lineasHab.join('')}`;
       }
       return { html, antecedentes_otros };
     } catch {
