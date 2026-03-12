@@ -35,6 +35,11 @@ export class CrearMedicoComponent implements OnInit {
   firmaFile: File | null = null;
   firmaPreview: string | null = null;
   uploadingFirma = false;
+
+  // Variables para sello húmedo
+  selloFile: File | null = null;
+  selloPreview: string | null = null;
+  uploadingSello = false;
   
   // Variables para validación de email
   emailExists = false;
@@ -106,11 +111,9 @@ export class CrearMedicoComponent implements OnInit {
       this.medicoService.createMedico(medicoDataToSend).subscribe({
         next: (response: any) => {
           if (response.success) {
-            // Si hay firma digital, subirla después de crear el médico
-            // El backend retorna: { data: { medico: {...}, usuario: {...}, message: "..." } }
             const medicoId = response.data?.medico?.id || response.data?.id;
-            if (this.firmaFile && medicoId) {
-              this.uploadFirmaAfterCreate(medicoId);
+            if ((this.firmaFile || this.selloFile) && medicoId) {
+              this.uploadFirmaYSelloAfterCreate(medicoId);
             } else {
               this.alertService.show(
                 `Médico ${this.medicoData.nombres} ${this.medicoData.apellidos} creado exitosamente. Se ha enviado el email con las credenciales.`,
@@ -206,31 +209,80 @@ export class CrearMedicoComponent implements OnInit {
     this.firmaPreview = null;
   }
 
-  uploadFirmaAfterCreate(medicoId: number) {
-    if (!this.firmaFile) {
-      return;
-    }
-    
-    this.uploadingFirma = true;
-    
-    this.firmaService.subirFirma(medicoId, this.firmaFile).subscribe({
-      next: (response) => {
-        const msg = response.success
-          ? `Médico ${this.medicoData.nombres} ${this.medicoData.apellidos} creado exitosamente con firma digital. Se ha enviado el email.`
-          : `Médico ${this.medicoData.nombres} ${this.medicoData.apellidos} creado exitosamente. No se pudo subir la firma digital.`;
-        this.alertService.show(msg, 'success', { navigateTo: '/admin/medicos' });
-        this.uploadingFirma = false;
-      },
-      error: (error) => {
-        this.errorHandler.logError(error, 'subir firma digital después de crear');
-        this.alertService.show(
-          `Médico ${this.medicoData.nombres} ${this.medicoData.apellidos} creado exitosamente. No se pudo subir la firma digital.`,
-          'success',
-          { navigateTo: '/admin/medicos' }
-        );
-        this.uploadingFirma = false;
+  onSelloSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        this.alertService.show('Solo se permiten archivos de imagen', 'error');
+        return;
       }
-    });
+      if (file.size > 2 * 1024 * 1024) {
+        this.alertService.show('El archivo no puede ser mayor a 2MB', 'error');
+        return;
+      }
+      this.selloFile = file;
+      const reader = new FileReader();
+      reader.onload = (e) => { this.selloPreview = e.target?.result as string; };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  removeSello() {
+    this.selloFile = null;
+    this.selloPreview = null;
+  }
+
+  uploadFirmaYSelloAfterCreate(medicoId: number) {
+    const doNavigate = () => {
+      this.alertService.show(
+        `Médico ${this.medicoData.nombres} ${this.medicoData.apellidos} creado exitosamente. Se ha enviado el email con las credenciales.`,
+        'success',
+        { navigateTo: '/admin/medicos' }
+      );
+    };
+    const uploadFirma = (): void => {
+      if (!this.firmaFile) {
+        uploadSello();
+        return;
+      }
+      this.uploadingFirma = true;
+      this.firmaService.subirFirma(medicoId, this.firmaFile).subscribe({
+        next: () => {
+          this.firmaFile = null;
+          this.firmaPreview = null;
+          this.uploadingFirma = false;
+          uploadSello();
+        },
+        error: (err) => {
+          const msg = err?.error?.error?.message || err?.error?.message || 'No se pudo subir la firma.';
+          this.alertService.show(msg, 'error');
+          this.uploadingFirma = false;
+          uploadSello();
+        }
+      });
+    };
+    const uploadSello = (): void => {
+      if (!this.selloFile) {
+        doNavigate();
+        return;
+      }
+      this.uploadingSello = true;
+      this.firmaService.subirSello(medicoId, this.selloFile).subscribe({
+        next: () => {
+          this.selloFile = null;
+          this.selloPreview = null;
+          this.uploadingSello = false;
+          doNavigate();
+        },
+        error: (err) => {
+          const msg = err?.error?.error?.message || err?.error?.message || 'No se pudo subir el sello.';
+          this.alertService.show(msg, 'error');
+          this.uploadingSello = false;
+          doNavigate();
+        }
+      });
+    };
+    uploadFirma();
   }
 
   volver() {

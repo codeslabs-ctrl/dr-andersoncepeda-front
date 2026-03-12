@@ -30,6 +30,13 @@
   margin-bottom: 2rem;
 }
 
+.form-section.card-section {
+  padding: 1.25rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background: #fafafa;
+}
+
 .form-section h3 {
   font-size: 1.25rem;
   font-weight: 600;

@@ -126,10 +126,10 @@
       </div>
     </div>
 
-    <div class="form-section">
+    <div class="form-section card-section">
       <h3>Firma Digital (Opcional)</h3>
       <div class="form-group">
-        <label class="form-label">Subir Firma Digital</label>
+        <label class="form-label">Subir archivo de firma</label>
         <input
           type="file"
           class="form-input"
@@ -137,23 +137,43 @@
           (change)="onFirmaSelected($event)"
           [disabled]="saving || uploadingFirma">
         <small class="form-text text-muted">
-          Formatos permitidos: PNG, JPG, JPEG, GIF, WEBP (máx. 2MB)
+          PNG, JPG, JPEG, GIF, WEBP (máx. 2MB)
         </small>
       </div>
-
-      <!-- Preview de firma -->
       <div *ngIf="firmaPreview" class="form-group">
-        <label class="form-label">Vista Previa:</label>
+        <label class="form-label">Vista previa</label>
         <div class="firma-preview-container">
-          <img [src]="firmaPreview" alt="Vista previa" class="firma-preview">
+          <img [src]="firmaPreview" alt="Vista previa firma" class="firma-preview">
           <div class="firma-actions">
-            <button 
-              type="button" 
-              class="btn btn-outline-danger btn-sm"
-              (click)="removeFirma()"
-              [disabled]="saving || uploadingFirma">
-              <i class="fas fa-times me-1"></i>
+            <button type="button" class="btn btn-outline-danger btn-sm" (click)="removeFirma()" [disabled]="saving || uploadingFirma">
               Quitar Firma
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section card-section">
+      <h3>Sello húmedo (Opcional)</h3>
+      <div class="form-group">
+        <label class="form-label">Subir archivo de sello</label>
+        <input
+          type="file"
+          class="form-input"
+          accept="image/*"
+          (change)="onSelloSelected($event)"
+          [disabled]="saving || uploadingSello">
+        <small class="form-text text-muted">
+          PNG, JPG, JPEG, GIF, WEBP (máx. 2MB)
+        </small>
+      </div>
+      <div *ngIf="selloPreview" class="form-group">
+        <label class="form-label">Vista previa</label>
+        <div class="firma-preview-container">
+          <img [src]="selloPreview" alt="Vista previa sello" class="firma-preview">
+          <div class="firma-actions">
+            <button type="button" class="btn btn-outline-danger btn-sm" (click)="removeSello()" [disabled]="saving || uploadingSello">
+              Quitar Sello
             </button>
           </div>
         </div>
@@ -171,7 +191,7 @@
       <button 
         type="submit" 
         class="btn btn-primary"
-        [disabled]="saving || !medicoForm.form.valid || emailExists || cedulaExists">
+        [disabled]="saving || uploadingFirma || uploadingSello || !medicoForm.form.valid || emailExists || cedulaExists">
         <span *ngIf="saving" class="spinner"></span>
         {{ saving ? 'Creando...' : 'Crear Médico' }}
       </button>

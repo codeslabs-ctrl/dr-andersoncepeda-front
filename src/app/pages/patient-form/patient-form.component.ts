@@ -205,6 +205,8 @@ export class PatientFormComponent implements OnInit {
             this.telefonoExists = true;
             this.telefonoChecked = true;
             this.alertService.show('El teléfono ya está siendo usado por otro paciente.', 'error');
+          } else if (/Transaction failed|violates not-null|historico_pacientes|consulta_id|relation\s+"/i.test(errorMessage || '')) {
+            this.alertService.show('No se pudo completar el registro del paciente. Por favor, intente de nuevo.', 'error');
           } else {
             this.alertService.show(errorMessage || this.errorHandler.getSafeErrorMessage(error, 'crear paciente'), 'error');
           }
