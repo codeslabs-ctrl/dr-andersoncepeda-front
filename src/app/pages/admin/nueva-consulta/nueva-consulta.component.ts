@@ -548,6 +548,14 @@ export class NuevaConsultaComponent implements OnInit {
     return !!paciente && !paciente.tiene_consulta;
   }
 
+  /** True si el paciente seleccionado ya tiene consultas: la opción "Primera Vez" no se muestra. */
+  get pacienteYaTieneConsultas(): boolean {
+    const id = Number(this.consultaForm.paciente_id);
+    if (!id) return false;
+    const paciente = this.pacientes.find(p => Number(p.id) === id);
+    return !!paciente && !!paciente.tiene_consulta;
+  }
+
   constructor(
     private consultaService: ConsultaService,
     private clinicaAtencionService: ClinicaAtencionService,
