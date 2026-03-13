@@ -58,6 +58,7 @@ import { ClinicaAtencionService, ClinicaAtencion } from '../../../services/clini
                   class="form-control" 
                   [(ngModel)]="consultaForm.paciente_id" 
                   name="paciente_id"
+                  (ngModelChange)="onPacienteChange($event)"
                   required>
                   <option value="0">Seleccionar paciente</option>
                   <option *ngFor="let paciente of pacientes" [value]="paciente.id">
@@ -160,7 +161,7 @@ import { ClinicaAtencionService, ClinicaAtencion } from '../../../services/clini
                   [(ngModel)]="consultaForm.tipo_consulta" 
                   name="tipo_consulta"
                   [disabled]="esPrimeraConsultaPaciente">
-                  <option value="primera_vez">Primera Vez</option>
+                  <option *ngIf="!pacienteYaTieneConsultas" value="primera_vez">Primera Vez</option>
                   <option value="control">Control</option>
                   <option value="seguimiento">Seguimiento</option>
                   <option value="urgencia">Urgencia</option>
@@ -706,6 +707,8 @@ export class NuevaConsultaComponent implements OnInit {
     const paciente = this.pacientes.find(p => Number(p.id) === id);
     if (paciente && !paciente.tiene_consulta) {
       this.consultaForm.tipo_consulta = 'primera_vez';
+    } else if (paciente && paciente.tiene_consulta && this.consultaForm.tipo_consulta === 'primera_vez') {
+      this.consultaForm.tipo_consulta = 'control';
     }
   }
 
