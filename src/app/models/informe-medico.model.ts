@@ -12,6 +12,7 @@ export interface InformeMedico {
   fecha_creacion: string;
   fecha_actualizacion: string;
   clinica_alias: string;
+  clinica_atencion_id?: number | null;
   observaciones?: string;
   numero_secuencial?: number;
   // Relaciones
