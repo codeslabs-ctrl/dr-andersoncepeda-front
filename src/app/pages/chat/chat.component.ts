@@ -39,7 +39,8 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
   constructor(
     public chatService: ChatService,
     public authService: AuthService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {

@@ -90,7 +90,7 @@ export class InformeMedicoDashboardComponent implements OnInit {
       'Eliminar informe'
     ).then((aceptar) => {
       if (!aceptar) return;
-      this.informeMedicoService.eliminarInforme(informe.id).subscribe({
+      this.informeMedicoService.eliminarInforme(informe.id!).subscribe({
         next: () => {
           this.alertService.showSuccess('Informe eliminado correctamente.');
           this.cargarInformes();
