@@ -9,6 +9,7 @@ export interface ClinicaAtencion {
   nombre_clinica: string;
   direccion_clinica: string | null;
   logo_path: string | null;
+  logo_path_recipe: string | null;
   activo: boolean;
   fecha_creacion?: string;
   fecha_actualizacion?: string;

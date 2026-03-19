@@ -756,7 +756,7 @@ export class InformeMedicoFormComponent implements OnInit {
           const fecha = c.fecha_consulta ? this.contextualDataService.formatearFecha(c.fecha_consulta) : '';
           if (fecha) partes.push(`<p><strong>${this.escapeHtml(fecha)}</strong></p>`);
           const motivo = this.stripHtmlTexto(c.motivo_consulta);
-          if (motivo) partes.push(`<p><strong>Motivo:</strong> ${this.escapeHtml(motivo)}</p>`);
+          if (motivo) partes.push(`<p><strong>Resumen Clínico:</strong> ${this.escapeHtml(motivo)}</p>`);
           const diag = this.stripHtmlTexto(c.diagnostico);
           if (diag) partes.push(`<p><strong>Diagnóstico:</strong> ${this.escapeHtml(diag)}</p>`);
           const trat = this.stripHtmlTexto(c.tratamiento);
@@ -1200,9 +1200,9 @@ export class InformeMedicoFormComponent implements OnInit {
         }
         
         // 4. Agregar campos en el mismo orden que la historia del paciente
-        // 4.1. Motivo de Consulta
+        // 4.1. Resumen Clínico
         if (historico?.motivo_consulta && historico.motivo_consulta.trim() !== '' && historico.motivo_consulta.trim() !== '<p></p>') {
-          contenidoSugerido += `<h3><strong>Motivo de Consulta:</strong></h3><p>${historico.motivo_consulta}</p>`;
+          contenidoSugerido += `<h3><strong>Resumen Clínico:</strong></h3><p>${historico.motivo_consulta}</p>`;
         }
         
         // 4.2. Antecedentes (estandarizados + otros; otros vienen de pacientes.antecedentes_otros)
@@ -1291,7 +1291,7 @@ export class InformeMedicoFormComponent implements OnInit {
         let contenidoSugerido = '';
         
         if (ultimoInforme.motivo_consulta) {
-          contenidoSugerido += `<h3>Motivo de Consulta:</h3><p>${ultimoInforme.motivo_consulta}</p>`;
+          contenidoSugerido += `<h3>Resumen Clínico:</h3><p>${ultimoInforme.motivo_consulta}</p>`;
         }
         
         if (ultimoInforme.diagnostico) {
@@ -1550,7 +1550,7 @@ export class InformeMedicoFormComponent implements OnInit {
       
       // Identificar el tipo de sección
       let tipoSeccion = '';
-      if (seccion.includes('Motivo de Consulta')) tipoSeccion = 'motivo';
+      if (seccion.includes('Resumen Clínico')) tipoSeccion = 'motivo';
       else if (seccion.includes('Antecedentes Médicos')) tipoSeccion = 'antecedentes';
       else if (seccion.includes('Examenes Médicos')) tipoSeccion = 'examenes';
       else if (seccion.includes('Diagnóstico:')) tipoSeccion = 'diagnostico';
