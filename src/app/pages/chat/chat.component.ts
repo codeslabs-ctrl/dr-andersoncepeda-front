@@ -5,6 +5,7 @@ import { RouterModule } from '@angular/router';
 import { ChatService, ChatMessageResponse } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
+import { ChatMarkdownPipe } from './chat-markdown.pipe';
 
 export interface ChatBubble {
   role: 'user' | 'assistant';
@@ -13,12 +14,13 @@ export interface ChatBubble {
   date: Date;
   /** Si el asistente sugiere abrir una pantalla (antecedentes, historia médica, etc.). */
   navigateTo?: string;
+  pdfDownload?: { base64: string; filename: string };
 }
 
 @Component({
   selector: 'app-chat',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, ChatMarkdownPipe],
   templateUrl: './chat.component.html',
   styleUrls: ['./chat.component.scss']
 })
@@ -65,7 +67,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (this.messages.length === 0) {
       this.messages.push({
         role: 'assistant',
-        text: 'Hola. Soy el asistente de DemoMed. Puedo ayudarte a crear pacientes, agendar consultas, generar informes, y abrir la historia médica o los antecedentes de un paciente. ¿En qué te ayudo?',
+        text: 'Hola. Soy el asistente del consultorio del Dr. Anderson Cepeda. Puedo ayudarte a crear pacientes, agendar consultas, generar informes, y abrir la historia médica o los antecedentes de un paciente. ¿En qué te ayudo?',
         date: new Date()
       });
       this.shouldScrollToBottom = true;
@@ -109,6 +111,19 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   goTo(navigateTo: string): void {
     if (navigateTo) this.router.navigateByUrl(navigateTo);
+  }
+
+  downloadPdf(attachment: { base64: string; filename: string }): void {
+    const bin = atob(attachment.base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = attachment.filename?.trim() || 'receta.pdf';
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   closeChat(): void {
