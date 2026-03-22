@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked, 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChatService, ChatMessageResponse } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
@@ -14,7 +15,7 @@ export interface ChatBubble {
   date: Date;
   /** Si el asistente sugiere abrir una pantalla (antecedentes, historia médica, etc.). */
   navigateTo?: string;
-  pdfDownload?: { base64: string; filename: string };
+  pdfDownloads?: { base64: string; filename: string; label: string }[];
 }
 
 @Component({
@@ -74,6 +75,31 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
   }
 
+  private setChatRequestError(err: unknown, kind: 'text' | 'audio'): void {
+    this.loading = false;
+    const intro = kind === 'audio' ? 'No se pudo enviar el audio.' : 'No se pudo enviar el mensaje.';
+    if (err instanceof HttpErrorResponse) {
+      if (err.status === 0) {
+        this.error =
+          `${intro} No hay respuesta del servidor del chat (¿está en ejecución el chatbot y la URL en environment correcta?).`;
+        return;
+      }
+      const body = err.error;
+      let serverMsg = '';
+      if (typeof body === 'string') serverMsg = body;
+      else if (body && typeof body === 'object') {
+        const o = body as { error?: unknown; message?: unknown };
+        if (typeof o.error === 'string') serverMsg = o.error;
+        else if (typeof o.message === 'string') serverMsg = o.message;
+      }
+      this.error = serverMsg
+        ? `${intro} ${serverMsg}`
+        : `${intro} HTTP ${err.status}${err.statusText ? ` (${err.statusText})` : ''}.`;
+      return;
+    }
+    this.error = `${intro} Inténtalo de nuevo.`;
+  }
+
   sendText(): void {
     const text = (this.inputText || '').trim();
     if (!text || this.loading) return;
@@ -84,10 +110,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.loading = true;
     this.chatService.sendMessage(text, this.conversationId ?? undefined).subscribe({
       next: (res) => this.handleResponse(res),
-      error: () => {
-        this.loading = false;
-        this.error = 'No se pudo enviar el mensaje. Inténtalo de nuevo.';
-      }
+      error: (err) => this.setChatRequestError(err, 'text')
     });
   }
 
@@ -96,12 +119,19 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (res.conversationId) this.conversationId = res.conversationId;
     const reply = (res.reply || '').trim();
     if (reply) {
+      const pdfDownloads =
+        res.pdfDownloads?.length
+          ? res.pdfDownloads
+          : res.pdfDownload
+            ? [{ ...res.pdfDownload, label: 'Descargar PDF' }]
+            : undefined;
       this.messages.push({
         role: 'assistant',
         text: reply,
         fromAudio: res.fromAudio,
         date: new Date(),
-        navigateTo: res.navigateTo
+        navigateTo: res.navigateTo,
+        pdfDownloads
       });
       this.shouldScrollToBottom = true;
       if (this.ttsEnabled) this.speak(reply);
@@ -113,7 +143,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (navigateTo) this.router.navigateByUrl(navigateTo);
   }
 
-  downloadPdf(attachment: { base64: string; filename: string }): void {
+  downloadPdf(attachment: { base64: string; filename: string; label?: string }): void {
     const bin = atob(attachment.base64);
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -183,9 +213,8 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.cdr.detectChanges();
       this.chatService.sendAudio(base64, mimeType, this.conversationId ?? undefined).subscribe({
         next: (res) => this.handleResponse(res),
-        error: () => {
-          this.loading = false;
-          this.error = 'No se pudo enviar el audio. Inténtalo de nuevo.';
+        error: (err) => {
+          this.setChatRequestError(err, 'audio');
           this.cdr.detectChanges();
         }
       });
