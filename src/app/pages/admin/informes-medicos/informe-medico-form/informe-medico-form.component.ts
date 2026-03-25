@@ -1039,6 +1039,7 @@ export class InformeMedicoFormComponent implements OnInit {
     opts: { incluirIntroPaciente: boolean; antecedentesNarrativo: string; paciente: any }
   ): string {
     const motivo = this.stripHtmlTexto(c.motivo_consulta);
+    const paraclin = this.stripHtmlTexto(c.examenes_paraclinicos);
     const diag = this.stripHtmlTexto(c.diagnostico);
     const plan = this.stripHtmlTexto(c.tratamiento);
     const edad = opts.paciente?.edad ?? opts.paciente?.edad_anos ?? '';
@@ -1059,6 +1060,9 @@ export class InformeMedicoFormComponent implements OnInit {
 
     const cuerpo: string[] = [];
     if (motivo) cuerpo.push(`Se trata de ${motivo.toLowerCase().replace(/^\.\s*/, '').replace(/\.$/, '')}.`);
+    if (paraclin) {
+      cuerpo.push(`En los exámenes paraclínicos complementarios se registra: ${this.escapeHtml(paraclin)}.`);
+    }
     if (diag) cuerpo.push(`En la consulta se establece el diagnóstico de "${this.escapeHtml(diag)}".`);
     if (plan) cuerpo.push(`En vista de los hallazgos, se indica y se da inicio al plan de "${this.escapeHtml(plan)}".`);
     if (cuerpo.length > 0) parrafos.push(`<p>${cuerpo.join(' ')}</p>`);
