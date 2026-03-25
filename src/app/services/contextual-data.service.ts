@@ -30,6 +30,8 @@ export interface UltimoInforme {
   id: number;
   titulo?: string;
   motivo_consulta: string;
+  /** historico_pacientes.examenes_paraclinicos */
+  examenes_paraclinicos: string;
   diagnostico: string;
   tratamiento: string;
   conclusiones: string;

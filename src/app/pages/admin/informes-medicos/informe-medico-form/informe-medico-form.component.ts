@@ -581,7 +581,8 @@ export class InformeMedicoFormComponent implements OnInit {
       'estado': 'Estado',
       'fecha_emision': 'Fecha de Emisión',
       'clinica_atencion_id': 'Clínica de atención',
-      'observaciones': 'Observaciones'
+      'observaciones': 'Observaciones',
+      'examenes_paraclinicos': 'Exámenes paraclínicos'
     };
     return nombres[campo] || campo;
   }
@@ -757,6 +758,8 @@ export class InformeMedicoFormComponent implements OnInit {
           if (fecha) partes.push(`<p><strong>${this.escapeHtml(fecha)}</strong></p>`);
           const motivo = this.stripHtmlTexto(c.motivo_consulta);
           if (motivo) partes.push(`<p><strong>Resumen Clínico:</strong> ${this.escapeHtml(motivo)}</p>`);
+          const paraclin = this.stripHtmlTexto(c.examenes_paraclinicos);
+          if (paraclin) partes.push(`<p><strong>Exámenes paraclínicos:</strong> ${this.escapeHtml(paraclin)}</p>`);
           const diag = this.stripHtmlTexto(c.diagnostico);
           if (diag) partes.push(`<p><strong>Diagnóstico:</strong> ${this.escapeHtml(diag)}</p>`);
           const trat = this.stripHtmlTexto(c.tratamiento);
@@ -1293,6 +1296,10 @@ export class InformeMedicoFormComponent implements OnInit {
         if (ultimoInforme.motivo_consulta) {
           contenidoSugerido += `<h3>Resumen Clínico:</h3><p>${ultimoInforme.motivo_consulta}</p>`;
         }
+
+        if (ultimoInforme.examenes_paraclinicos && ultimoInforme.examenes_paraclinicos.trim() !== '' && ultimoInforme.examenes_paraclinicos.trim() !== '<p></p>') {
+          contenidoSugerido += `<h3>Exámenes paraclínicos:</h3><p>${ultimoInforme.examenes_paraclinicos}</p>`;
+        }
         
         if (ultimoInforme.diagnostico) {
           contenidoSugerido += `<h3>Diagnóstico:</h3><p>${ultimoInforme.diagnostico}</p>`;
@@ -1343,6 +1350,9 @@ export class InformeMedicoFormComponent implements OnInit {
           break;
         case 'conclusiones':
           valorSugerido = ultimoInforme.conclusiones;
+          break;
+        case 'examenes_paraclinicos':
+          valorSugerido = ultimoInforme.examenes_paraclinicos || '';
           break;
       }
       
