@@ -582,7 +582,8 @@ export class InformeMedicoFormComponent implements OnInit {
       'fecha_emision': 'Fecha de Emisión',
       'clinica_atencion_id': 'Clínica de atención',
       'observaciones': 'Observaciones',
-      'examenes_paraclinicos': 'Exámenes paraclínicos'
+      'examenes_paraclinicos': 'Exámenes paraclínicos',
+      'examenes_medico': 'Examen físico'
     };
     return nombres[campo] || campo;
   }
@@ -760,6 +761,8 @@ export class InformeMedicoFormComponent implements OnInit {
           if (motivo) partes.push(`<p><strong>Resumen Clínico:</strong> ${this.escapeHtml(motivo)}</p>`);
           const paraclin = this.stripHtmlTexto(c.examenes_paraclinicos);
           if (paraclin) partes.push(`<p><strong>Exámenes paraclínicos:</strong> ${this.escapeHtml(paraclin)}</p>`);
+          const examFis = this.stripHtmlTexto(c.examenes_medico);
+          if (examFis) partes.push(`<p><strong>Examen físico:</strong> ${this.escapeHtml(examFis)}</p>`);
           const diag = this.stripHtmlTexto(c.diagnostico);
           if (diag) partes.push(`<p><strong>Diagnóstico:</strong> ${this.escapeHtml(diag)}</p>`);
           const trat = this.stripHtmlTexto(c.tratamiento);
@@ -1040,6 +1043,7 @@ export class InformeMedicoFormComponent implements OnInit {
   ): string {
     const motivo = this.stripHtmlTexto(c.motivo_consulta);
     const paraclin = this.stripHtmlTexto(c.examenes_paraclinicos);
+    const examFis = this.stripHtmlTexto(c.examenes_medico);
     const diag = this.stripHtmlTexto(c.diagnostico);
     const plan = this.stripHtmlTexto(c.tratamiento);
     const edad = opts.paciente?.edad ?? opts.paciente?.edad_anos ?? '';
@@ -1062,6 +1066,9 @@ export class InformeMedicoFormComponent implements OnInit {
     if (motivo) cuerpo.push(`Se trata de ${motivo.toLowerCase().replace(/^\.\s*/, '').replace(/\.$/, '')}.`);
     if (paraclin) {
       cuerpo.push(`En los exámenes paraclínicos complementarios se registra: ${this.escapeHtml(paraclin)}.`);
+    }
+    if (examFis) {
+      cuerpo.push(`Al examen físico se constata: ${this.escapeHtml(examFis)}.`);
     }
     if (diag) cuerpo.push(`En la consulta se establece el diagnóstico de "${this.escapeHtml(diag)}".`);
     if (plan) cuerpo.push(`En vista de los hallazgos, se indica y se da inicio al plan de "${this.escapeHtml(plan)}".`);
@@ -1221,14 +1228,14 @@ export class InformeMedicoFormComponent implements OnInit {
           }
         }
         
-        // 4.3. Examenes Fisicos
-        if (historico?.examenes_medico && historico.examenes_medico.trim() !== '' && historico.examenes_medico.trim() !== '<p></p>') {
-          contenidoSugerido += `<h3><strong>Examenes Fisicos:</strong></h3><p>${historico.examenes_medico}</p>`;
-        }
-        
-        // 4.4. Examenes Paraclínicos
+        // 4.3. Exámenes paraclínicos (antes del examen físico en el informe)
         if ((historico as any)?.examenes_paraclinicos && (historico as any).examenes_paraclinicos.trim() !== '' && (historico as any).examenes_paraclinicos.trim() !== '<p></p>') {
-          contenidoSugerido += `<h3><strong>Examenes Paraclínicos:</strong></h3><p>${(historico as any).examenes_paraclinicos}</p>`;
+          contenidoSugerido += `<h3><strong>Exámenes paraclínicos:</strong></h3><p>${(historico as any).examenes_paraclinicos}</p>`;
+        }
+
+        // 4.4. Examen físico (historico_pacientes.examenes_medico)
+        if (historico?.examenes_medico && historico.examenes_medico.trim() !== '' && historico.examenes_medico.trim() !== '<p></p>') {
+          contenidoSugerido += `<h3><strong>Examen físico:</strong></h3><p>${historico.examenes_medico}</p>`;
         }
         
         // 4.5. Diagnóstico
@@ -1304,6 +1311,10 @@ export class InformeMedicoFormComponent implements OnInit {
         if (ultimoInforme.examenes_paraclinicos && ultimoInforme.examenes_paraclinicos.trim() !== '' && ultimoInforme.examenes_paraclinicos.trim() !== '<p></p>') {
           contenidoSugerido += `<h3>Exámenes paraclínicos:</h3><p>${ultimoInforme.examenes_paraclinicos}</p>`;
         }
+
+        if (ultimoInforme.examenes_medico && ultimoInforme.examenes_medico.trim() !== '' && ultimoInforme.examenes_medico.trim() !== '<p></p>') {
+          contenidoSugerido += `<h3>Examen físico:</h3><p>${ultimoInforme.examenes_medico}</p>`;
+        }
         
         if (ultimoInforme.diagnostico) {
           contenidoSugerido += `<h3>Diagnóstico:</h3><p>${ultimoInforme.diagnostico}</p>`;
@@ -1357,6 +1368,9 @@ export class InformeMedicoFormComponent implements OnInit {
           break;
         case 'examenes_paraclinicos':
           valorSugerido = ultimoInforme.examenes_paraclinicos || '';
+          break;
+        case 'examenes_medico':
+          valorSugerido = ultimoInforme.examenes_medico || '';
           break;
       }
       
@@ -1541,10 +1555,11 @@ export class InformeMedicoFormComponent implements OnInit {
     const motivoCount = (contenido.match(/Motivo de Consulta/gi) || []).length;
     const antecedentesCount = (contenido.match(/Antecedentes Médicos/gi) || []).length;
     const examenesCount = (contenido.match(/Examenes Médicos/gi) || []).length;
+    const examenFisicoCount = (contenido.match(/Examen físico/gi) || []).length;
     const diagnosticoCount = (contenido.match(/Diagnóstico:/gi) || []).length;
     
     // Si alguna sección aparece más de una vez, hay duplicación
-    return motivoCount > 1 || antecedentesCount > 1 || examenesCount > 1 || diagnosticoCount > 1;
+    return motivoCount > 1 || antecedentesCount > 1 || examenesCount > 1 || examenFisicoCount > 1 || diagnosticoCount > 1;
   }
 
   /**
@@ -1567,6 +1582,7 @@ export class InformeMedicoFormComponent implements OnInit {
       if (seccion.includes('Resumen Clínico')) tipoSeccion = 'motivo';
       else if (seccion.includes('Antecedentes Médicos')) tipoSeccion = 'antecedentes';
       else if (seccion.includes('Examenes Médicos')) tipoSeccion = 'examenes';
+      else if (seccion.includes('Examen físico')) tipoSeccion = 'examen_fisico';
       else if (seccion.includes('Diagnóstico:')) tipoSeccion = 'diagnostico';
       else if (seccion.includes('Conclusiones:')) tipoSeccion = 'conclusiones';
       else if (seccion.includes('Plan de Tratamiento')) tipoSeccion = 'plan';

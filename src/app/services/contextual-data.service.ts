@@ -32,6 +32,8 @@ export interface UltimoInforme {
   motivo_consulta: string;
   /** historico_pacientes.examenes_paraclinicos */
   examenes_paraclinicos: string;
+  /** historico_pacientes.examenes_medico (examen físico) */
+  examenes_medico: string;
   diagnostico: string;
   tratamiento: string;
   conclusiones: string;
