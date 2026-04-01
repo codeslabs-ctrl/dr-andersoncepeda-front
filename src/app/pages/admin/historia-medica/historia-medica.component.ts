@@ -18,7 +18,7 @@ import { HistoricoAntecedenteService } from '../../../services/historico-anteced
 import { ConsultaWithDetails } from '../../../models/consulta.model';
 import { HistoricoWithDetails } from '../../../services/historico.service';
 import { ArchivoAnexo } from '../../../models/archivo.model';
-import { AntecedenteMedicoTipo } from '../../../models/antecedente-tipo.model';
+import { AntecedenteMedicoTipo, AntecedenteTipoCategoriaLabel, defaultAntecedenteCategoriaLabels } from '../../../models/antecedente-tipo.model';
 import { HistoricoAntecedente, AntecedentesResponse } from '../../../models/historico-antecedente.model';
 import { FileUploadComponent } from '../../../components/file-upload/file-upload.component';
 import { RemitirPacienteModalComponent } from '../../../components/remitir-paciente-modal/remitir-paciente-modal.component';
@@ -108,30 +108,16 @@ import { Patient } from '../../../models/patient.model';
               </button>
               <div class="antecedentes-paciente-content" *ngIf="antecedentesPacienteExpanded">
                 <ng-container *ngIf="antecedentesPacienteData">
-                  <div class="antecedentes-paciente-cat" *ngIf="getAntecedentesPresentesCategoria('medicos').length">
-                    <strong>Médicos:</strong>
-                    <ul>
-                      <li *ngFor="let a of getAntecedentesPresentesCategoria('medicos')">
-                        {{ getTipoNombre(a.antecedente_tipo_id) }}<span *ngIf="a.detalle"> — {{ formatDetalleAntecedente(a.detalle) }}</span>
-                      </li>
-                    </ul>
-                  </div>
-                  <div class="antecedentes-paciente-cat" *ngIf="getAntecedentesPresentesCategoria('quirurgicos').length">
-                    <strong>Quirúrgicos:</strong>
-                    <ul>
-                      <li *ngFor="let a of getAntecedentesPresentesCategoria('quirurgicos')">
-                        {{ getTipoNombre(a.antecedente_tipo_id) }}<span *ngIf="a.detalle"> — {{ formatDetalleAntecedente(a.detalle) }}</span>
-                      </li>
-                    </ul>
-                  </div>
-                  <div class="antecedentes-paciente-cat" *ngIf="getAntecedentesPresentesCategoria('habitos').length">
-                    <strong>Hábitos:</strong>
-                    <ul>
-                      <li *ngFor="let a of getAntecedentesPresentesCategoria('habitos')">
-                        {{ getTipoNombre(a.antecedente_tipo_id) }}<span *ngIf="a.detalle"> — {{ formatDetalleAntecedente(a.detalle) }}</span>
-                      </li>
-                    </ul>
-                  </div>
+                  <ng-container *ngFor="let cat of antecedentesCategorias">
+                    <div class="antecedentes-paciente-cat" *ngIf="getAntecedentesPresentesPorCodigo(cat.codigo).length">
+                      <strong>{{ cat.etiqueta }}:</strong>
+                      <ul>
+                        <li *ngFor="let a of getAntecedentesPresentesPorCodigo(cat.codigo)">
+                          {{ getTipoNombre(a.antecedente_tipo_id) }}<span *ngIf="a.detalle"> — {{ formatDetalleAntecedente(a.detalle) }}</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </ng-container>
                   <div class="antecedentes-paciente-cat" *ngIf="antecedentesPacienteData?.antecedentes_otros">
                     <strong>Otros:</strong>
                     <div class="antecedentes-otros-text" [innerHTML]="antecedentesPacienteData.antecedentes_otros"></div>
@@ -1293,13 +1279,11 @@ export class HistoriaMedicaComponent implements OnInit {
     antecedentes_medicos_template: ''
   };
 
-  // Antecedentes estandarizados (catálogo + respuestas por historial)
-  antecedentesTiposMedicos: AntecedenteMedicoTipo[] = [];
-  antecedentesTiposQuirurgicos: AntecedenteMedicoTipo[] = [];
-  antecedentesTiposHabitos: AntecedenteMedicoTipo[] = [];
+  // Antecedentes estandarizados (categorías desde antecedentes_tipo_label + ítems por codigo)
+  antecedentesCategorias: AntecedenteTipoCategoriaLabel[] = [];
+  antecedentesPorCodigo: Record<string, AntecedenteMedicoTipo[]> = {};
   antecedentesForm: Record<number, { presente: boolean; detalle: string }> = {};
   loadingAntecedentes = false;
-  private antecedentesLoadCount = 0;
   antecedentesMedicosExpanded = false;
   antecedentesQuirurgicosExpanded = false;
   antecedentesHabitosExpanded = false;
@@ -1847,28 +1831,49 @@ export class HistoriaMedicaComponent implements OnInit {
 
   loadAntecedentesTipos(): void {
     this.loadingAntecedentes = true;
-    this.antecedentesLoadCount = 0;
-    const maybeDone = () => {
-      this.antecedentesLoadCount++;
-      if (this.antecedentesLoadCount === 3) {
-        this.loadingAntecedentes = false;
-        this.loadAntecedentesPaciente();
-        if (!this.historiaData) this.initAntecedentesFormVacío();
-        else if (this.historiaData.id) this.cargarHistoricoAntecedentes(this.historiaData.id);
-      }
+    this.antecedentesPorCodigo = {};
+    const finish = () => {
+      this.loadingAntecedentes = false;
+      this.loadAntecedentesPaciente();
+      if (!this.historiaData) this.initAntecedentesFormVacío();
+      else if (this.historiaData.id) this.cargarHistoricoAntecedentes(this.historiaData.id);
     };
-    this.antecedenteTipoService.getByTipo('antecedentes_medicos').subscribe({
-      next: (r) => { if (r.success && r.data) this.antecedentesTiposMedicos = r.data; maybeDone(); },
-      error: () => maybeDone()
+    const fetchItemsForCategorias = (cats: AntecedenteTipoCategoriaLabel[]) => {
+      this.antecedentesCategorias = cats;
+      const n = cats.length;
+      if (n === 0) {
+        finish();
+        return;
+      }
+      let done = 0;
+      const step = () => {
+        done++;
+        if (done >= n) finish();
+      };
+      cats.forEach((c) => {
+        this.antecedenteTipoService.getByTipo(c.codigo).subscribe({
+          next: (r) => {
+            this.antecedentesPorCodigo[c.codigo] = r.success && r.data ? r.data : [];
+            step();
+          },
+          error: () => {
+            this.antecedentesPorCodigo[c.codigo] = [];
+            step();
+          }
+        });
+      });
+    };
+    this.antecedenteTipoService.getCategoriaLabels().subscribe({
+      next: (res) => {
+        const cats = res.success && res.data?.length ? res.data : defaultAntecedenteCategoriaLabels();
+        fetchItemsForCategorias(cats);
+      },
+      error: () => fetchItemsForCategorias(defaultAntecedenteCategoriaLabels())
     });
-    this.antecedenteTipoService.getByTipo('antecedentes_quirurgicos').subscribe({
-      next: (r) => { if (r.success && r.data) this.antecedentesTiposQuirurgicos = r.data; maybeDone(); },
-      error: () => maybeDone()
-    });
-    this.antecedenteTipoService.getByTipo('habitos_psicobiologicos').subscribe({
-      next: (r) => { if (r.success && r.data) this.antecedentesTiposHabitos = r.data; maybeDone(); },
-      error: () => maybeDone()
-    });
+  }
+
+  private allAntecedentesTiposList(): AntecedenteMedicoTipo[] {
+    return this.antecedentesCategorias.flatMap((c) => this.antecedentesPorCodigo[c.codigo] || []);
   }
 
   /** Carga antecedentes del paciente (solo lectura en bloque Info). */
@@ -1893,7 +1898,7 @@ export class HistoriaMedicaComponent implements OnInit {
   }
 
   getTipoNombre(tipoId: number): string {
-    const t = [...this.antecedentesTiposMedicos, ...this.antecedentesTiposQuirurgicos, ...this.antecedentesTiposHabitos].find(x => x.id === tipoId);
+    const t = this.allAntecedentesTiposList().find((x) => x.id === tipoId);
     return t?.nombre ?? `Tipo ${tipoId}`;
   }
 
@@ -1924,15 +1929,13 @@ export class HistoriaMedicaComponent implements OnInit {
     return s;
   }
 
-  getAntecedentesPresentesCategoria(categoria: 'medicos' | 'quirurgicos' | 'habitos'): HistoricoAntecedente[] {
+  getAntecedentesPresentesPorCodigo(codigo: string): HistoricoAntecedente[] {
     if (!this.antecedentesPacienteData?.antecedentes) return [];
-    const list = this.antecedentesPacienteData.antecedentes.filter(a => a.presente);
-    const idsMedicos = this.antecedentesTiposMedicos.map(x => x.id).filter((id): id is number => id != null);
-    const idsQuirurgicos = this.antecedentesTiposQuirurgicos.map(x => x.id).filter((id): id is number => id != null);
-    const idsHabitos = this.antecedentesTiposHabitos.map(x => x.id).filter((id): id is number => id != null);
-    if (categoria === 'medicos') return list.filter(a => idsMedicos.includes(a.antecedente_tipo_id));
-    if (categoria === 'quirurgicos') return list.filter(a => idsQuirurgicos.includes(a.antecedente_tipo_id));
-    return list.filter(a => idsHabitos.includes(a.antecedente_tipo_id));
+    const list = this.antecedentesPacienteData.antecedentes.filter((a) => a.presente);
+    const ids = (this.antecedentesPorCodigo[codigo] || [])
+      .map((x) => x.id)
+      .filter((id): id is number => id != null);
+    return list.filter((a) => ids.includes(a.antecedente_tipo_id));
   }
 
   tieneAntecedentesPacienteParaMostrar(): boolean {
@@ -1944,7 +1947,7 @@ export class HistoriaMedicaComponent implements OnInit {
 
   initAntecedentesFormVacío(): void {
     const map: Record<number, { presente: boolean; detalle: string }> = {};
-    [...this.antecedentesTiposMedicos, ...this.antecedentesTiposQuirurgicos, ...this.antecedentesTiposHabitos].forEach(t => {
+    this.allAntecedentesTiposList().forEach((t) => {
       if (t.id != null) map[t.id] = { presente: false, detalle: '' };
     });
     this.antecedentesForm = map;
@@ -1959,9 +1962,9 @@ export class HistoriaMedicaComponent implements OnInit {
         const list = data.antecedentes || [];
         const otros = data.antecedentes_otros ?? '';
         const map: Record<number, { presente: boolean; detalle: string }> = {};
-        [...this.antecedentesTiposMedicos, ...this.antecedentesTiposQuirurgicos, ...this.antecedentesTiposHabitos].forEach(t => {
+        this.allAntecedentesTiposList().forEach((t) => {
           if (t.id == null) return;
-          const item = list.find(a => a.antecedente_tipo_id === t.id);
+          const item = list.find((a) => a.antecedente_tipo_id === t.id);
           map[t.id] = item
             ? { presente: item.presente, detalle: item.detalle ?? '' }
             : { presente: false, detalle: '' };
@@ -2030,7 +2033,7 @@ export class HistoriaMedicaComponent implements OnInit {
   }
 
   guardarAntecedentes(historicoId: number): void {
-    const allTipos = [...this.antecedentesTiposMedicos, ...this.antecedentesTiposQuirurgicos, ...this.antecedentesTiposHabitos];
+    const allTipos = this.allAntecedentesTiposList();
     const items: HistoricoAntecedente[] = allTipos
       .filter(t => t.id != null)
       .map(t => ({

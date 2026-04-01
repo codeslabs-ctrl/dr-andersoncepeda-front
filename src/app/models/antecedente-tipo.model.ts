@@ -36,3 +36,23 @@ export const REQUIERE_DETALLE_LABELS: Record<RequiereDetalleEnum, string> = {
   especifique: 'Especifique (texto libre)',
   cirugia: 'Tipo de cirugía + Año'
 };
+
+/** Fila de antecedentes_tipo_label (API GET .../antecedentes-tipo/categoria-labels). */
+export interface AntecedenteTipoCategoriaLabel {
+  id: number;
+  codigo: string;
+  etiqueta: string;
+  orden: number;
+  activo: boolean;
+}
+
+/** Fallback si la tabla aún no existe o el API falla (mismas claves que ANTECEDENTE_TIPO_LABELS). */
+export function defaultAntecedenteCategoriaLabels(): AntecedenteTipoCategoriaLabel[] {
+  return (Object.entries(ANTECEDENTE_TIPO_LABELS) as [AntecedenteTipoEnum, string][]).map(([codigo, etiqueta], i) => ({
+    id: i + 1,
+    codigo,
+    etiqueta,
+    orden: i,
+    activo: true
+  }));
+}
