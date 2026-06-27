@@ -29,6 +29,7 @@ export interface DatosMedico {
 export interface UltimoInforme {
   id: number;
   titulo?: string;
+  tipo_consulta?: string;
   motivo_consulta: string;
   /** historico_pacientes.examenes_paraclinicos */
   examenes_paraclinicos: string;
@@ -36,6 +37,9 @@ export interface UltimoInforme {
   examenes_medico: string;
   diagnostico: string;
   tratamiento: string;
+  tratamiento_cumplido?: string;
+  evaluacion_subjetiva?: string;
+  evaluacion_complementaria?: string;
   conclusiones: string;
   fecha_consulta: string;
   fecha_emision: string;

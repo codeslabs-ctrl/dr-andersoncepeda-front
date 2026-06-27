@@ -738,6 +738,75 @@ export class InformeMedicoFormComponent implements OnInit {
     return val.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
+  private esPrimeraVezControl(c: any): boolean {
+    return (c?.tipo_consulta || '').toString().toLowerCase() === 'primera_vez';
+  }
+
+  private formatearFechaCorta(fecha: string): string {
+    const d = new Date(fecha);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+
+  private lineaCampoInforme(etiqueta: string, valor: string | null | undefined): string {
+    const t = this.stripHtmlTexto(valor);
+    if (!t) return '';
+    return `<p><strong>${etiqueta}:</strong> ${this.escapeHtml(t)}</p>`;
+  }
+
+  private bloqueCampoInforme(etiqueta: string, valor: string | null | undefined): string {
+    if (valor == null || !String(valor).trim() || String(valor).trim() === '<p></p>') return '';
+    if (/<table/i.test(valor)) {
+      return `<p><strong>${etiqueta}:</strong></p>${valor}`;
+    }
+    return this.lineaCampoInforme(etiqueta, valor);
+  }
+
+  private generarBloquePrimeraVez(c: any): string {
+    const partes: string[] = [];
+    const resumen = this.lineaCampoInforme('Resumen Clínico', c.motivo_consulta);
+    if (resumen) partes.push(resumen);
+    const paraclin = this.bloqueCampoInforme('Exámenes paraclínicos', c.examenes_paraclinicos);
+    if (paraclin) partes.push(paraclin);
+    const examFis = this.lineaCampoInforme('Examen físico', c.examenes_medico);
+    if (examFis) partes.push(examFis);
+    const diag = this.lineaCampoInforme('Diagnóstico', c.diagnostico);
+    if (diag) partes.push(diag);
+    const trat = this.lineaCampoInforme('Tratamiento', c.tratamiento);
+    if (trat) partes.push(trat);
+    const concl = this.lineaCampoInforme('Conclusiones', c.conclusiones);
+    if (concl) partes.push(concl);
+    partes.push('<p><br></p>');
+    return partes.join('');
+  }
+
+  private generarBloqueSeguimiento(c: any): string {
+    const fechaCorta = c.fecha_consulta ? this.formatearFechaCorta(c.fecha_consulta) : '';
+    if (!fechaCorta) return '';
+    const partes: string[] = [];
+    partes.push(`<p><strong>Consulta control (${fechaCorta})</strong></p>`);
+    const subj = this.lineaCampoInforme('Evaluación subjetiva', c.evaluacion_subjetiva);
+    if (subj) partes.push(subj);
+    const cumpl = this.lineaCampoInforme('Tratamiento cumplido', c.tratamiento_cumplido);
+    if (cumpl) partes.push(cumpl);
+    const estudios = this.bloqueCampoInforme('Estudios paraclínicos', c.examenes_paraclinicos);
+    if (estudios) partes.push(estudios);
+    const plan = this.lineaCampoInforme('Plan de trabajo', c.tratamiento);
+    if (plan) partes.push(plan);
+    const hemato = this.lineaCampoInforme('Control hematológico', c.evaluacion_complementaria);
+    if (hemato) partes.push(hemato);
+    partes.push('<p><br></p>');
+    return partes.join('');
+  }
+
+  private generarBloqueControlInforme(c: any): string {
+    return this.esPrimeraVezControl(c)
+      ? this.generarBloquePrimeraVez(c)
+      : this.generarBloqueSeguimiento(c);
+  }
+
   async anadirSeccionesSeleccionadas(): Promise<void> {
     if (!this.haySeccionSeleccionada()) return;
     const partes: string[] = [];
@@ -756,21 +825,7 @@ export class InformeMedicoFormComponent implements OnInit {
       const controlesIncluidos = this.controlesIncluidos;
       if (controlesIncluidos.length) {
         controlesIncluidos.forEach((c: any) => {
-          const fecha = c.fecha_consulta ? this.contextualDataService.formatearFecha(c.fecha_consulta) : '';
-          if (fecha) partes.push(`<p><strong>${this.escapeHtml(fecha)}</strong></p>`);
-          const motivo = this.stripHtmlTexto(c.motivo_consulta);
-          if (motivo) partes.push(`<p><strong>Resumen Clínico:</strong> ${this.escapeHtml(motivo)}</p>`);
-          const paraclin = this.stripHtmlTexto(c.examenes_paraclinicos);
-          if (paraclin) partes.push(`<p><strong>Exámenes paraclínicos:</strong> ${this.escapeHtml(paraclin)}</p>`);
-          const examFis = this.stripHtmlTexto(c.examenes_medico);
-          if (examFis) partes.push(`<p><strong>Examen físico:</strong> ${this.escapeHtml(examFis)}</p>`);
-          const diag = this.stripHtmlTexto(c.diagnostico);
-          if (diag) partes.push(`<p><strong>Diagnóstico:</strong> ${this.escapeHtml(diag)}</p>`);
-          const trat = this.stripHtmlTexto(c.tratamiento);
-          if (trat) partes.push(`<p><strong>Tratamiento:</strong> ${this.escapeHtml(trat)}</p>`);
-          const concl = this.stripHtmlTexto(c.conclusiones);
-          if (concl) partes.push(`<p><strong>Conclusiones:</strong> ${this.escapeHtml(concl)}</p>`);
-          partes.push('<p><br></p>');
+          partes.push(this.generarBloqueControlInforme(c));
         });
       }
     }
@@ -1151,51 +1206,7 @@ export class InformeMedicoFormComponent implements OnInit {
   }
 
   /**
-   * Genera un bloque narrativo por control (una fecha + párrafo). Primer control puede incluir intro paciente y antecedentes.
-   */
-  private generarBloqueNarrativoControl(
-    c: any,
-    fechaStr: string,
-    opts: { incluirIntroPaciente: boolean; antecedentesNarrativo: string; paciente: any }
-  ): string {
-    const motivo = this.stripHtmlTexto(c.motivo_consulta);
-    const paraclin = this.stripHtmlTexto(c.examenes_paraclinicos);
-    const examFis = this.stripHtmlTexto(c.examenes_medico);
-    const diag = this.stripHtmlTexto(c.diagnostico);
-    const plan = this.stripHtmlTexto(c.tratamiento);
-    const edad = opts.paciente?.edad ?? opts.paciente?.edad_anos ?? '';
-    const cedula = (opts.paciente?.cedula || '').trim();
-    const esFemenino = ((opts.paciente as any)?.sexo || '').toString().toLowerCase().includes('femenino');
-    const identificado = esFemenino ? 'identificada' : 'identificado';
-
-    const parrafos: string[] = [];
-    parrafos.push(`<p><strong>${this.escapeHtml(fechaStr)}</strong></p>`);
-
-    if (opts.incluirIntroPaciente) {
-      let intro = `Paciente ${esFemenino ? 'femenino' : 'masculino'} de ${edad} años de edad`;
-      if (cedula) intro += `, ${identificado} bajo la cédula ${this.escapeHtml(cedula)}`;
-      intro += `, quien acude a consulta el ${fechaStr}.`;
-      if (opts.antecedentesNarrativo) intro += ` ${opts.antecedentesNarrativo}`;
-      parrafos.push(`<p>${intro}</p>`);
-    }
-
-    const cuerpo: string[] = [];
-    if (motivo) cuerpo.push(`Se trata de ${motivo.toLowerCase().replace(/^\.\s*/, '').replace(/\.$/, '')}.`);
-    if (paraclin) {
-      cuerpo.push(`En los exámenes paraclínicos complementarios se registra: ${this.escapeHtml(paraclin)}.`);
-    }
-    if (examFis) {
-      cuerpo.push(`Al examen físico se constata: ${this.escapeHtml(examFis)}.`);
-    }
-    if (diag) cuerpo.push(`En la consulta se establece el diagnóstico de "${this.escapeHtml(diag)}".`);
-    if (plan) cuerpo.push(`En vista de los hallazgos, se indica y se da inicio al plan de "${this.escapeHtml(plan)}".`);
-    if (cuerpo.length > 0) parrafos.push(`<p>${cuerpo.join(' ')}</p>`);
-
-    return parrafos.join('');
-  }
-
-  /**
-   * Genera el contenido del informe en formato narrativo (un bloque por control) y lo asigna al editor.
+   * Genera el contenido del informe según el modelo (primera vez vs seguimiento) y lo asigna al editor.
    */
   async generarInformeNarrativo(): Promise<void> {
     const paciente = this.datosContextuales?.paciente;
@@ -1208,22 +1219,20 @@ export class InformeMedicoFormComponent implements OnInit {
     }
     const historicoId = this.historicoParaSecciones?.id;
     const incluirAntecedentes = !!this.incluirAntecedentes && !!historicoId;
-    const sexoPaciente = (paciente as any)?.sexo ?? null;
-    const antecedentesNarrativo = incluirAntecedentes
-      ? await this.buildAntecedentesNarrativo(historicoId, sexoPaciente)
-      : '';
 
     const bloques: string[] = [];
+    if (incluirAntecedentes && historicoId) {
+      const { html: antHtml, antecedentes_otros } = await this.buildAntecedentesEstandarizadosHTML(historicoId);
+      if (antHtml) bloques.push(antHtml);
+      if (antecedentes_otros && String(antecedentes_otros).trim() !== '' && String(antecedentes_otros).trim() !== '<p></p>') {
+        const otrosTexto = this.stripHtmlTexto(antecedentes_otros);
+        if (otrosTexto) bloques.push(`<h3><strong>Otros antecedentes:</strong></h3><p>${this.escapeHtml(otrosTexto)}</p>`);
+      }
+    }
+
     const controlesOrdenadosPorId = [...controles].sort((a, b) => a.id - b.id);
-    controlesOrdenadosPorId.forEach((c, index) => {
-      const fechaStr = c.fecha_consulta ? this.contextualDataService.formatearFecha(c.fecha_consulta) : '';
-      if (!fechaStr) return;
-      const bloque = this.generarBloqueNarrativoControl(c, fechaStr, {
-        incluirIntroPaciente: index === 0,
-        antecedentesNarrativo: index === 0 ? antecedentesNarrativo : '',
-        paciente
-      });
-      bloques.push(bloque);
+    controlesOrdenadosPorId.forEach((c) => {
+      bloques.push(this.generarBloqueControlInforme(c));
     });
 
     const html = bloques.join('');
@@ -1234,7 +1243,7 @@ export class InformeMedicoFormComponent implements OnInit {
     setTimeout(() => {
       if (this.editorContenido) this.editorContenido.setValue(html);
     }, 0);
-    this.alertService.showSuccess('Informe narrativo generado. Puede editarlo y guardar.');
+    this.alertService.showSuccess('Informe generado según el modelo. Puede editarlo y guardar.');
   }
 
   /**

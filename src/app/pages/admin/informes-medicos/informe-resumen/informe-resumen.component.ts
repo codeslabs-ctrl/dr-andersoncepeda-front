@@ -1,10 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { InformeMedicoService } from '../../../../services/informe-medico.service';
 import { PatientService } from '../../../../services/patient.service';
 import { MedicoService } from '../../../../services/medico.service';
 import { AlertService } from '../../../../services/alert.service';
+import { prepararContenidoInformeParaVista } from '../../../../utils/informe-contenido-display.util';
 
 @Component({
   selector: 'app-informe-resumen',
@@ -16,6 +18,7 @@ import { AlertService } from '../../../../services/alert.service';
 export class InformeResumenComponent implements OnInit {
   informeId: number | null = null;
   informe: any = null;
+  contenidoFormateado: SafeHtml | null = null;
   paciente: any = null;
   medico: any = null;
   cargando = false;
@@ -29,7 +32,8 @@ export class InformeResumenComponent implements OnInit {
     private informeMedicoService: InformeMedicoService,
     private patientService: PatientService,
     private medicoService: MedicoService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private sanitizer: DomSanitizer
   ) {}
 
   ngOnInit(): void {
@@ -51,7 +55,12 @@ export class InformeResumenComponent implements OnInit {
       // Cargar datos del informe
       const informeResponse = await this.informeMedicoService.obtenerInformePorId(this.informeId).toPromise();
       this.informe = informeResponse?.data;
-      
+      this.contenidoFormateado = this.informe?.contenido
+        ? this.sanitizer.bypassSecurityTrustHtml(
+            prepararContenidoInformeParaVista(this.informe.contenido)
+          )
+        : null;
+
       if (this.informe) {
         // Cargar datos del paciente
         const pacienteResponse = await this.patientService.getPatientById(this.informe.paciente_id).toPromise();

@@ -439,3 +439,54 @@ small { font-size: 0.75rem; line-height: 1.5; color: #666666; }
 .ql-toolbar button.ql-active .ql-fill {
   fill: var(--color-primary);
 }
+
+/* Tablas en vista previa de informes (innerHTML no recibe estilos encapsulados del componente) */
+.contenido-informe table,
+.contenido-informe table.informe-tabla,
+.informe-contenido table,
+.informe-contenido table.informe-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0 1rem;
+  font-size: 0.9rem;
+  display: table;
+}
+
+.contenido-informe table tbody,
+.contenido-informe table thead,
+.informe-contenido table tbody,
+.informe-contenido table thead {
+  display: table-row-group;
+}
+
+.contenido-informe table tr,
+.informe-contenido table tr {
+  display: table-row;
+}
+
+.contenido-informe table th,
+.contenido-informe table td,
+.informe-contenido table th,
+.informe-contenido table td {
+  display: table-cell;
+  border: 1px solid #bbb;
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.contenido-informe table th,
+.contenido-informe table thead th,
+.contenido-informe table tbody tr:first-child td,
+.informe-contenido table th,
+.informe-contenido table thead th,
+.informe-contenido table tbody tr:first-child td {
+  background-color: #e3f2fd;
+  color: #1976D2;
+  font-weight: 600;
+}
+
+.contenido-informe table tbody tr:nth-child(even):not(:first-child) td,
+.informe-contenido table tbody tr:nth-child(even):not(:first-child) td {
+  background-color: #fafafa;
+}
