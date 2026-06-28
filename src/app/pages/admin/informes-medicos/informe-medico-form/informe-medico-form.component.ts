@@ -499,7 +499,10 @@ export class InformeMedicoFormComponent implements OnInit {
         this.errorHandler.logError(error, 'crear informe médico');
         this.error = 'Error creando el informe médico';
         this.guardando = false;
-        const safeMessage = this.errorHandler.getSafeErrorMessage(error, 'crear informe médico');
+        const backendMsg = error?.error?.message as string | undefined;
+        const safeMessage =
+          backendMsg ||
+          this.errorHandler.getSafeErrorMessage(error, 'crear informe médico');
         this.alertService.showError(safeMessage);
       }
     });
